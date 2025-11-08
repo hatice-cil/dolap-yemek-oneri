@@ -34,52 +34,58 @@ function pdo()
 function get_or_create_ingredient_id($name)
 {
     $name = trim($name);
-    if ($name === '') return null;
+    if ($name === '')
+        return null;
     $pdo = pdo();
     $stmt = $pdo->prepare("SELECT id FROM ingredients WHERE name = ?");
     $stmt->execute([$name]);
     $row = $stmt->fetch();
-    if ($row) return (int)$row['id'];
+    if ($row)
+        return (int) $row['id'];
 
     $stmt = $pdo->prepare("INSERT INTO ingredients (name) VALUES (?)");
     $stmt->execute([$name]);
-    return (int)$pdo->lastInsertId();
+    return (int) $pdo->lastInsertId();
 }
 
 function add_to_pantry($ingredient_name)
 {
     $ingredient_id = get_or_create_ingredient_id($ingredient_name);
-    if ($ingredient_id === null) return false;
+    if ($ingredient_id === null)
+        return false;
     $pdo = pdo();
     // Aynı malzeme zaten varsa tekrar ekleme
-    $exists = $pdo->prepare("SELECT 1 FROM pantry_items WHERE ingredient_id = ?");
+    $exists = $pdo->prepare("SELECT 1 FROM pantry WHERE ingredient_id = ?");
     $exists->execute([$ingredient_id]);
-    if ($exists->fetch()) return true;
+    if ($exists->fetch())
+        return true;
 
-    $stmt = $pdo->prepare("INSERT INTO pantry_items (ingredient_id) VALUES (?)");
+    $stmt = $pdo->prepare("INSERT INTO pantry (ingredient_id) VALUES (?)");
     return $stmt->execute([$ingredient_id]);
 }
 
 function delete_pantry_item($id)
 {
     $pdo = pdo();
-    $stmt = $pdo->prepare("DELETE FROM pantry_items WHERE id = ?");
-    return $stmt->execute([(int)$id]);
+    $stmt = $pdo->prepare("DELETE FROM pantry WHERE id = ?");
+    return $stmt->execute([(int) $id]);
 }
 
 function clear_pantry()
 {
     $pdo = pdo();
-    $stmt = $pdo->prepare("DELETE FROM pantry_items");
+    $stmt = $pdo->prepare("DELETE FROM pantry");
     $stmt->execute();
     return $stmt->rowCount();
 }
 
+// db.php dosyasında bu kısmı bulun:
 function list_pantry()
 {
     $pdo = pdo();
-    $sql = "SELECT p.id, i.name, p.created_at
-            FROM pantry_items p
+    // p.created_at yerine p.added_at kullanıldı
+    $sql = "SELECT p.id, i.name, p.added_at
+            FROM pantry p
             JOIN ingredients i ON i.id = p.ingredient_id
             ORDER BY i.name ASC";
     return $pdo->query($sql)->fetchAll();
@@ -96,7 +102,7 @@ function get_all_ingredients()
     $pdo = pdo();
     $stmt = $pdo->prepare("
         SELECT name, 
-               (SELECT COUNT(*) FROM pantry_items WHERE ingredient_id = ingredients.id) as count
+               (SELECT COUNT(*) FROM pantry WHERE ingredient_id = ingredients.id) as count
         FROM ingredients 
         ORDER BY count DESC, name ASC
     ");
@@ -142,7 +148,8 @@ function search_recipes_scored($ingredients, $min_match = 1)
 // Basit tarif arama (yedek fonksiyon)
 function search_recipes($names)
 {
-    if (!$names) return get_all_recipes();
+    if (!$names)
+        return get_all_recipes();
 
     $pdo = pdo();
 
